@@ -1,11 +1,11 @@
 import { Mensaje, SendMensajeData } from "../entities/Mensaje";
 
-// El callback que se ejecutará cuando llegue un nuevo mensaje
+// Definimos el tipo de la función callback para cuando llega un mensaje nuevo
 export type NewMessageCallback = (message: Mensaje) => void;
 
 export interface IMessageRepository {
     /**
-     * Obtiene el historial de mensajes entre dos usuarios.
+     * Obtiene el historial de mensajes entre dos usuarios (ordenado cronológicamente).
      */
     getMessages(
         sender_id: string,
@@ -13,14 +13,13 @@ export interface IMessageRepository {
     ): Promise<Mensaje[]>;
 
     /**
-     * Envía un nuevo mensaje.
+     * Guarda un nuevo mensaje en la base de datos.
      */
     sendMessage(data: SendMensajeData): Promise<Mensaje>;
 
     /**
-     * Se suscribe a nuevos mensajes en un canal específico (Realtime).
-     * @param callback - La función a llamar cuando llega un mensaje nuevo.
-     * @returns Una función para desuscribirse.
+     * Se suscribe a cambios en la tabla de mensajes para Realtime.
+     * Devuelve una función para cancelar la suscripción.
      */
     subscribeToMessages(
         callback: NewMessageCallback

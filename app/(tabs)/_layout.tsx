@@ -3,63 +3,97 @@ import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/presentation/hooks/useAuth';
 import { colors } from '../../src/presentation/styles/authStyles';
+import { Platform } from 'react-native';
 
 export default function TabLayout() {
     const { role, isAuthenticated } = useAuth();
     const isAsesor = role === 'asesor_comercial';
+    const headerTintColor = Platform.OS === 'ios' ? colors.primary : colors.text;
 
-    const renderIcon = (name: any) => ({ color }: { color: string }) => (
-        <Ionicons name={name} size={28} color={color} />
+    const renderIcon = (name: keyof typeof Ionicons.glyphMap) => ({ color }: { color: string }) => (
+        <Ionicons name={name} size={24} color={color} />
     );
 
     return (
-        <Tabs screenOptions={{
-            tabBarActiveTintColor: colors.primary,
-            headerShown: true,
-        }}>
-            {/* 1. Pestaña Catálogo / Gestión */}
-            <Tabs.Screen name="index" options={{
-                title: isAsesor ? 'Gestión Planes' : 'Catálogo',
-                tabBarIcon: renderIcon(isAsesor ? 'list' : 'home'),
-            }} />
+        <Tabs
+            screenOptions={{
+                tabBarActiveTintColor: colors.primary,
+                tabBarInactiveTintColor: colors.textSecondary,
+                tabBarStyle: {
+                    backgroundColor: colors.card,
+                    borderTopColor: colors.border,
+                    height: Platform.OS === 'ios' ? 85 : 65,
+                    paddingBottom: Platform.OS === 'ios' ? 30 : 10,
+                    paddingTop: 10,
+                },
+                tabBarLabelStyle: {
+                    fontSize: 12,
+                    fontWeight: '500',
+                    marginTop: -5,
+                },
+                headerStyle: {
+                    backgroundColor: colors.card,
+                    borderBottomColor: colors.border,
+                },
+                headerTintColor: headerTintColor,
+                headerTitleStyle: { fontWeight: 'bold' },
+            }}
+        >
+            {/* 1. Catálogo (Siempre visible) */}
+            <Tabs.Screen
+                name="index"
+                options={{
+                    title: isAsesor ? 'Gestión' : 'Catálogo',
+                    tabBarIcon: renderIcon(isAsesor ? 'grid' : 'home'),
+                }}
+            />
 
-            {/* 2. Pestaña Condicional (Solicitudes vs Mis Planes) */}
-            {isAsesor ? (
-                // Tab para Asesor
-                <Tabs.Screen name="solicitudes" options={{
+            {/* 2. Solicitudes (Solo Asesor) */}
+            <Tabs.Screen
+                name="solicitudes"
+                options={{
                     title: 'Solicitudes',
                     tabBarIcon: renderIcon('documents'),
-                }} />
-            ) : (
-                // Tab para Usuario (Solo si está logueado)
-                isAuthenticated ? (
-                    <Tabs.Screen name="misplanes" options={{
-                        title: 'Mis Planes',
-                        tabBarIcon: renderIcon('briefcase'),
-                    }} />
-                ) : (
-                    // Si es invitado, ocultamos esta pestaña
-                    <Tabs.Screen name="misplanes" options={{ href: null }} />
-                )
-            )}
+                    href: isAsesor ? undefined : null,
+                }}
+            />
 
-            {/* 3. Pestaña Perfil */}
-            <Tabs.Screen name="profile" options={{
-                title: 'Perfil',
-                tabBarIcon: renderIcon('person'),
-            }} />
+            {/* 3. Chat (Solo Asesor) */}
+            <Tabs.Screen
+                name="chat"
+                options={{
+                    title: 'Chats',
+                    tabBarIcon: renderIcon('chatbubbles'),
+                    // Importante: Como es un Stack, al darle click entra a su _layout
+                    href: isAsesor ? undefined : null,
+                    headerShown: false // Ocultamos el header del Tab para que el Stack controle su propio header
+                }}
+            />
 
-            {/* --- RUTAS OCULTAS DEL MENÚ --- */}
-            {/* Estas pantallas existen pero no tienen botón en la barra inferior */}
+            {/* 4. Mis Planes (Solo Usuario) */}
+            <Tabs.Screen
+                name="misplanes"
+                options={{
+                    title: 'Mis Planes',
+                    tabBarIcon: renderIcon('briefcase'),
+                    href: (!isAsesor && isAuthenticated) ? undefined : null,
+                }}
+            />
 
-            <Tabs.Screen name="create-plan" options={{ href: null, title: 'Plan' }} />
-            <Tabs.Screen name="change-password" options={{ href: null, title: 'Seguridad' }} />
-            <Tabs.Screen name="chat/index" options={{ href: null }} />
-            <Tabs.Screen name="chat/[receiverId]" options={{ href: null }} />
+            {/* 5. Perfil (Siempre visible) */}
+            <Tabs.Screen
+                name="profile"
+                options={{
+                    title: 'Perfil',
+                    tabBarIcon: renderIcon('person'),
+                }}
+            />
 
-            {/* Si no es Asesor, ocultamos la ruta de solicitudes para que no sea accesible */}
-            {!isAsesor && <Tabs.Screen name="solicitudes" options={{ href: null }} />}
+            {/* --- RUTAS OCULTAS --- */}
 
+            <Tabs.Screen name="create-plan" options={{ href: null, headerTitle: isAsesor ? 'Crear Plan' : 'Detalle Plan' }} />
+            <Tabs.Screen name="change-password" options={{ href: null, headerTitle: 'Seguridad' }} />
+            
         </Tabs>
     );
 }

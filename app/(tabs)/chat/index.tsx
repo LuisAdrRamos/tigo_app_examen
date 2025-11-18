@@ -1,68 +1,141 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, FlatList, ActivityIndicator, Pressable, Alert } from 'react-native';
-import { Link } from 'expo-router';
+import React, { useState, useCallback } from 'react';
+import { View, Text, FlatList, ActivityIndicator, Pressable, StyleSheet } from 'react-native';
+import { Link, useFocusEffect } from 'expo-router';
 import { useAuth } from '../../../src/presentation/hooks/useAuth';
-// import { useTraining } from '../../../src/presentation/hooks/useTraining';
-import { tabsStyles, ColorPalette } from '../../../src/presentation/styles/tabsStyles';
+import { useContrataciones } from '../../../src/presentation/hooks/useContrataciones'; // <-- Reutilizamos esto
+import { colors } from '../../../src/presentation/styles/authStyles';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function ChatListScreen() {
-    const { user: currentUser } = useAuth();
-    // 🟢 CORRECCIÓN: usersList ya está disponible en el hook
-    // const { usersList, loading: loadingUsers, fetchUsersForAssignment } = useTraining();
-    // const [users, setUsers] = useState<typeof usersList>([]);
+    const { role } = useAuth();
+    const { solicitudes, loading: loadingContratos, refetch } = useContrataciones();
+    const [clientes, setClientes] = useState<any[]>([]);
 
-    // useEffect(() => {
-    //     // Filtramos para mostrar a todos EXCEPTO a mí mismo
-    //     if (usersList.length > 0 && currentUser) {
-    //         // Nota: usersList solo trae rol 'Usuario'. Si queremos entrenadores, hay que recargar.
-    //         // Para el deber, asumiremos que usersList incluye a todos los perfiles visibles.
-    //         const otherUsers = usersList.filter(u => u.id !== currentUser.id);
-    //         setUsers(otherUsers);
-    //     }
-    // }, [usersList, currentUser]);
+    useFocusEffect(
+        useCallback(() => {
+            if (role === 'asesor_comercial') {
+                refetch(); // Cargamos las contrataciones recientes
+            }
+        }, [role])
+    );
 
-    // // Ejecutamos la carga al montar, asegurando que se cargue la lista de perfiles
-    // useEffect(() => {
-    //     fetchUsersForAssignment();
-    // }, [fetchUsersForAssignment]);
+    // Procesar las solicitudes para extraer usuarios únicos
+    useFocusEffect(
+        useCallback(() => {
+            if (solicitudes.length > 0) {
+                const usuariosMap = new Map();
 
+                solicitudes.forEach(solicitud => {
+                    const user = solicitud.user_profile;
+                    // Evitamos duplicados usando el ID como clave
+                    if (user && !usuariosMap.has(user.id)) {
+                        usuariosMap.set(user.id, {
+                            id: user.id,
+                            name: user.name || 'Usuario',
+                            email: user.email || 'Cliente', // Nota: El email no siempre viene en profile, usamos fallback
+                            telefono: user.telefono
+                        });
+                    }
+                });
 
-    // if (loadingUsers || !currentUser) {
-    //     return <ActivityIndicator style={tabsStyles.centered} size="large" />;
-    // }
+                setClientes(Array.from(usuariosMap.values()));
+            }
+        }, [solicitudes])
+    );
 
-    // // ... (renderUserItem y return de la vista son correctos) ...
-    // const renderUserItem = ({ item }: { item: typeof usersList[0] }) => (
-    //     <Link
-    //         href={{
-    //             pathname: "/(tabs)/chat/[receiverId]",
-    //             params: { receiverId: item.id, receiverName: item.name || item.email }
-    //         }}
-    //         asChild
-    //     >
-    //         <Pressable style={tabsStyles.routineItem}>
-    //             <View>
-    //                 <Text style={tabsStyles.routineName}>{item.name || item.email}</Text>
-    //                 <Text style={{ fontSize: 12, color: ColorPalette.textSecondary }}>
-    //                     Rol: {item.role}
-    //                 </Text>
-    //             </View>
-    //             <Ionicons name="chatbox-outline" size={24} color={ColorPalette.primary} />
-    //         </Pressable>
-    //     </Link>
-    // );
+    if (loadingContratos && clientes.length === 0) {
+        return <View style={styles.centered}><ActivityIndicator size="large" color={colors.primary} /></View>;
+    }
 
+    // Vista para Usuario Normal
+    if (role !== 'asesor_comercial') {
+        return (
+            <View style={styles.centered}>
+                <Ionicons name="chatbubbles" size={80} color={colors.border} />
+                <Text style={styles.emptyTitle}>Chat de Soporte</Text>
+                <Text style={styles.emptySubtitle}>
+                    Accede al chat directamente desde la tarjeta de tu plan en "Mis Planes".
+                </Text>
+            </View>
+        );
+    }
+
+    // Vista para Asesor
     return (
-        <View style={tabsStyles.container}>
-            {/* <FlatList */}
-                {/* // data={users}
+        <View style={styles.container}>
+            <View style={styles.header}>
+                <Text style={styles.headerTitle}>Clientes con Planes</Text>
+            </View>
+
+            <FlatList
+                data={clientes}
                 keyExtractor={(item) => item.id}
-                // renderItem={renderUserItem}
-                contentContainerStyle={{ paddingHorizontal: 20 }}
-                ListEmptyComponent={<Text style={tabsStyles.subtitle}>No hay otros usuarios para chatear.</Text>}
-            /> */}
-            
+                contentContainerStyle={{ padding: 10 }}
+                renderItem={({ item }) => (
+                    <Link
+                        href={{
+                            pathname: "/(tabs)/chat/[receiverId]",
+                            params: { receiverId: item.id, receiverName: item.name }
+                        }}
+                        asChild
+                    >
+                        <Pressable style={styles.item}>
+                            <View style={styles.avatar}>
+                                <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 18 }}>
+                                    {item.name.charAt(0).toUpperCase()}
+                                </Text>
+                            </View>
+                            <View style={{ flex: 1 }}>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                                    <Text style={styles.name}>{item.name}</Text>
+                                    <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+                                </View>
+                                <Text style={styles.preview}>
+                                    {item.telefono ? `Tel: ${item.telefono}` : 'Cliente Tigo'}
+                                </Text>
+                            </View>
+                        </Pressable>
+                    </Link>
+                )}
+                ListEmptyComponent={
+                    <View style={styles.centered}>
+                        <Text style={styles.emptySubtitle}>No hay clientes con planes contratados aún.</Text>
+                    </View>
+                }
+            />
         </View>
     );
 }
+
+const styles = StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
+    centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 30 },
+    header: { backgroundColor: colors.card, padding: 15, borderBottomWidth: 1, borderBottomColor: colors.border },
+    headerTitle: { fontSize: 20, fontWeight: 'bold', color: colors.primary },
+    item: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 15,
+        backgroundColor: 'white',
+        borderRadius: 12,
+        marginBottom: 10,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 2
+    },
+    avatar: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        backgroundColor: colors.primary,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 15
+    },
+    name: { fontWeight: 'bold', fontSize: 16, color: colors.text },
+    preview: { color: colors.textSecondary, marginTop: 4 },
+    emptyTitle: { fontSize: 20, fontWeight: 'bold', color: colors.text, marginTop: 20 },
+    emptySubtitle: { fontSize: 14, color: colors.textSecondary, textAlign: 'center', marginTop: 10 }
+});

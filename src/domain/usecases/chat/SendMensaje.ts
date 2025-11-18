@@ -9,7 +9,7 @@ export class SendMensaje {
             throw new Error("El mensaje no puede estar vacío.");
         }
         if (!data.sender_id || !data.receiver_id) {
-            throw new Error("Sender y Receiver ID son obligatorios.");
+            throw new Error("Faltan los IDs de los usuarios.");
         }
 
         return this.messageRepository.sendMessage(data);

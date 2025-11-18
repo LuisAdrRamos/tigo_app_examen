@@ -1,17 +1,17 @@
 /**
  * Entidad de Dominio Mensaje.
- * Utilizada para el chat en tiempo real entre entrenador y usuario.
+ * Coincide con la tabla 'mensajes' de Supabase.
  */
 export interface Mensaje {
     id: number;
-    sender_id: string;      // ID del remitente
-    receiver_id: string;    // ID del receptor
-    content: string;
-    created_at: string;
+    sender_id: string;      // Quién lo envía
+    receiver_id: string;    // Para quién es
+    content: string;        // El texto
+    created_at: string;     // Fecha
 }
 
 /**
- * Datos necesarios para enviar un mensaje.
+ * DTO (Data Transfer Object) para enviar un mensaje nuevo.
  */
 export interface SendMensajeData {
     sender_id: string;

@@ -7,22 +7,21 @@ export class SupabaseMessageRepository implements IMessageRepository {
 
     private channel: RealtimeChannel | null = null;
 
+    // 1. Obtener historial usando la función RPC de la base de datos
     async getMessages(sender_id: string, receiver_id: string): Promise<Mensaje[]> {
-
-        // 🟢 SOLUCIÓN FINAL: Llamar a la función nativa de PostgreSQL
         const { data, error } = await supabase.rpc('get_conversation_messages', {
             user_id_a: sender_id,
             user_id_b: receiver_id,
         });
 
         if (error) {
-            console.error("Error fetching messages (RPC):", error.message);
-            throw new Error(`No se pudo cargar el historial: ${error.message}`);
+            console.error("Error fetching messages:", error.message);
+            return [];
         }
-        // El resultado de rpc ya viene como un arreglo de Mensajes
-        return data || [];
+        return data as Mensaje[];
     }
 
+    // 2. Enviar mensaje (Insert normal)
     async sendMessage(data: SendMensajeData): Promise<Mensaje> {
         const { data: newMessage, error } = await supabase
             .from('mensajes')
@@ -34,19 +33,14 @@ export class SupabaseMessageRepository implements IMessageRepository {
             .select()
             .single();
 
-        if (error) {
-            console.error("Error sending message:", error.message);
-            throw new Error(`Error al enviar el mensaje: ${error.message}`);
-        }
-        if (!newMessage) {
-            throw new Error("No se recibió el mensaje enviado.");
-        }
+        if (error) throw new Error(error.message);
         return newMessage as Mensaje;
     }
 
+    // 3. Suscripción Realtime (Escuchar todo INSERT en la tabla mensajes)
     subscribeToMessages(callback: NewMessageCallback): () => void {
-        // Creamos un canal general para la tabla 'mensajes'.
-        this.channel = supabase.channel('public:mensajes');
+        // Creamos un canal único para evitar colisiones
+        this.channel = supabase.channel('public:mensajes:chat_global');
 
         this.channel
             .on(
@@ -57,15 +51,14 @@ export class SupabaseMessageRepository implements IMessageRepository {
                     table: 'mensajes'
                 },
                 (payload) => {
+                    // Cuando llega un mensaje nuevo, avisamos a la UI
                     const newMessage = payload.new as Mensaje;
                     callback(newMessage);
                 }
             )
-            .subscribe((status) => {
-                console.log('Suscripción al chat:', status);
-            });
+            .subscribe();
 
-        // Devolvemos una función para limpiar (desuscribirse)
+        // Devolvemos función de limpieza
         return () => {
             if (this.channel) {
                 supabase.removeChannel(this.channel);

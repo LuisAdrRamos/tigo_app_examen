@@ -1,162 +1,95 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {
-    View,
-    Text,
-    TextInput,
-    FlatList,
-    ActivityIndicator,
-    KeyboardAvoidingView,
-    Platform,
-    Alert,
-    Button,
-    // 🟢 CORRECCIÓN: Importar StyleSheet
-    StyleSheet
-} from 'react-native';
+import { View, Text, TextInput, FlatList, ActivityIndicator, KeyboardAvoidingView, Platform, TouchableOpacity, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
-import { useAuth } from '../../../src/presentation/hooks/useAuth';
 import { useChat } from '../../../src/presentation/hooks/useChat';
-import { Mensaje } from '@/src/domain/entities/Mensaje';
-import { tabsStyles, ColorPalette } from '../../../src/presentation/styles/tabsStyles';
+import { useAuth } from '../../../src/presentation/hooks/useAuth';
+import { colors } from '../../../src/presentation/styles/authStyles';
 import { Ionicons } from '@expo/vector-icons';
+import { Mensaje } from '@/src/domain/entities/Mensaje';
 
 export default function ConversationScreen() {
-    const { user: currentUser } = useAuth();
     const navigation = useNavigation();
     const { receiverId, receiverName } = useLocalSearchParams<{ receiverId: string, receiverName: string }>();
+    const { user } = useAuth();
+    const { messages, loading, sendMessage } = useChat(receiverId); // Hook conectado a Realtime
+
+    const [text, setText] = useState('');
     const flatListRef = useRef<FlatList>(null);
-    const [messageText, setMessageText] = useState('');
 
-    const { messages, loading, sendMessage, currentUserId } = useChat(receiverId);
-
-    // Ajustar el título de la navegación
+    // Configurar título
     useEffect(() => {
-        if (receiverName) {
-            navigation.setOptions({ title: receiverName });
-        }
-    }, [receiverName, navigation]);
+        navigation.setOptions({ title: receiverName || 'Chat' });
+    }, [receiverName]);
 
-    // Auto-scroll cuando llegan nuevos mensajes
+    // Scroll al fondo al recibir mensajes
     useEffect(() => {
         if (messages.length > 0) {
-            flatListRef.current?.scrollToEnd({ animated: true });
+            setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
         }
     }, [messages]);
 
-    const handleSendMessage = async () => {
-        if (messageText.trim() === '') return;
-
-        const content = messageText.trim();
-        setMessageText(''); // Limpiar inmediatamente
-
-        const result = await sendMessage(content);
-        if (!result.success) {
-            Alert.alert("Error", "No se pudo enviar el mensaje.");
-            setMessageText(content); // Restaurar si falla
-        }
+    const handleSend = async () => {
+        if (!text.trim()) return;
+        const msg = text.trim();
+        setText('');
+        await sendMessage(msg);
     };
 
     const renderMessage = ({ item }: { item: Mensaje }) => {
-        const isMine = item.sender_id === currentUserId;
-
+        const isMe = item.sender_id === user?.id;
         return (
-            <View
-                style={[
-                    styles.messageBubble,
-                    isMine ? styles.myMessage : styles.theirMessage,
-                    { backgroundColor: isMine ? ColorPalette.primary : ColorPalette.card }
-                ]}
-            >
-                <Text style={{ color: isMine ? 'white' : ColorPalette.text }}>
-                    {item.content}
-                </Text>
-                <Text style={styles.timestamp}>
-                    {new Date(item.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+            <View style={[
+                styles.bubble,
+                isMe ? styles.bubbleMe : styles.bubbleOther
+            ]}>
+                <Text style={isMe ? styles.textMe : styles.textOther}>{item.content}</Text>
+                <Text style={[styles.time, isMe ? { color: '#ddd' } : { color: 'gray' }]}>
+                    {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </Text>
             </View>
         );
     };
 
-    if (loading) {
-        return <ActivityIndicator style={tabsStyles.centered} size="large" />;
-    }
+    if (loading) return <ActivityIndicator style={{ flex: 1 }} size="large" color={colors.primary} />;
 
     return (
         <KeyboardAvoidingView
-            style={tabsStyles.container}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+            style={{ flex: 1, backgroundColor: '#f5f5f5' }}
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            keyboardVerticalOffset={90}
         >
             <FlatList
                 ref={flatListRef}
                 data={messages}
                 keyExtractor={(item) => item.id.toString()}
                 renderItem={renderMessage}
-                contentContainerStyle={styles.listContent}
+                contentContainerStyle={{ padding: 15 }}
             />
 
             <View style={styles.inputContainer}>
                 <TextInput
-                    style={styles.messageInput}
+                    style={styles.input}
                     placeholder="Escribe un mensaje..."
-                    value={messageText}
-                    onChangeText={setMessageText}
+                    value={text}
+                    onChangeText={setText}
                     multiline
                 />
-                <Button
-                    title="Enviar"
-                    onPress={handleSendMessage}
-                    disabled={messageText.trim() === ''}
-                    color={ColorPalette.primary}
-                />
+                <TouchableOpacity onPress={handleSend} style={styles.sendBtn}>
+                    <Ionicons name="send" size={20} color="white" />
+                </TouchableOpacity>
             </View>
         </KeyboardAvoidingView>
     );
 }
 
-// Estilos específicos para la conversación (similares a los de tabsStyles)
-const styles = StyleSheet.create({ // <-- El error se resuelve con el import de StyleSheet
-    listContent: {
-        padding: 10,
-    },
-    messageBubble: {
-        padding: 10,
-        borderRadius: 15,
-        maxWidth: '80%',
-        marginVertical: 4,
-        minWidth: 80,
-    },
-    myMessage: {
-        alignSelf: 'flex-end',
-    },
-    theirMessage: {
-        alignSelf: 'flex-start',
-        borderWidth: 1,
-        borderColor: ColorPalette.border,
-    },
-    timestamp: {
-        fontSize: 10,
-        alignSelf: 'flex-end',
-        color: 'rgba(255, 255, 255, 0.7)',
-        marginTop: 3,
-    },
-    inputContainer: {
-        flexDirection: 'row',
-        padding: 10,
-        borderTopWidth: 1,
-        borderTopColor: ColorPalette.border,
-        backgroundColor: ColorPalette.card,
-        alignItems: 'center',
-    },
-    messageInput: {
-        flex: 1,
-        maxHeight: 100,
-        minHeight: 40,
-        borderWidth: 1,
-        borderColor: ColorPalette.border,
-        borderRadius: 20,
-        paddingHorizontal: 15,
-        marginRight: 10,
-        backgroundColor: ColorPalette.background,
-        color: ColorPalette.text,
-    },
+const styles = StyleSheet.create({
+    bubble: { maxWidth: '80%', padding: 12, borderRadius: 15, marginBottom: 10 },
+    bubbleMe: { alignSelf: 'flex-end', backgroundColor: colors.primary, borderBottomRightRadius: 2 },
+    bubbleOther: { alignSelf: 'flex-start', backgroundColor: 'white', borderBottomLeftRadius: 2, borderWidth: 1, borderColor: '#eee' },
+    textMe: { color: 'white', fontSize: 16 },
+    textOther: { color: '#333', fontSize: 16 },
+    time: { fontSize: 10, marginTop: 5, alignSelf: 'flex-end' },
+    inputContainer: { flexDirection: 'row', padding: 10, backgroundColor: 'white', alignItems: 'center' },
+    input: { flex: 1, backgroundColor: '#f0f0f0', borderRadius: 20, paddingHorizontal: 15, paddingVertical: 10, maxHeight: 100 },
+    sendBtn: { backgroundColor: colors.primary, width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginLeft: 10 }
 });

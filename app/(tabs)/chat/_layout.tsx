@@ -1,16 +1,21 @@
 import { Stack } from 'expo-router';
 import React from 'react';
+import { colors } from '../../../src/presentation/styles/authStyles';
 
 export default function ChatStackLayout() {
     return (
-        <Stack>
-            {/* index.tsx será la lista de contactos, con header mostrado por (tabs)/_layout */}
-            <Stack.Screen name="index" options={{ title: 'Contactos', headerShown: true }} />
-
-            {/* [receiverId].tsx será la conversación, el título se establece dinámicamente */}
+        <Stack screenOptions={{
+            headerStyle: { backgroundColor: colors.primary },
+            headerTintColor: 'white',
+            headerTitleStyle: { fontWeight: 'bold' }
+        }}>
+            <Stack.Screen
+                name="index"
+                options={{ title: 'Conversaciones', headerShown: false }}
+            />
             <Stack.Screen
                 name="[receiverId]"
-                options={{ title: 'Conversación', headerShown: true }}
+                options={{ title: 'Chat' }}
             />
         </Stack>
     );
