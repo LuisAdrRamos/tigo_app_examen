@@ -1,113 +1,64 @@
-import { Tabs, useRouter } from 'expo-router'; // <-- 1. Importar useRouter
 import React from 'react';
-import { FontAwesome, Ionicons } from '@expo/vector-icons';
+import { Tabs } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/presentation/hooks/useAuth';
-import { Button, Alert } from 'react-native';
-import { colors } from '../../src/presentation/styles/authStyles'; // Importar colores para el botón Login
+import { colors } from '../../src/presentation/styles/authStyles';
 
-export default function TabsLayout() {
-    // 2. Obtener 'isAuthenticated' y 'logout'
-    const { isAuthenticated, logout } = useAuth();
-    const router = useRouter();
+export default function TabLayout() {
+    const { role, isAuthenticated } = useAuth();
+    const isAsesor = role === 'asesor_comercial';
 
-    // 3. Esta es la función para CERRAR SESIÓN (para usuarios logueados)
-    const handleLogout = async () => {
-        Alert.alert(
-            "Cerrar Sesión",
-            "¿Estás seguro de que deseas cerrar sesión?",
-            [
-                { text: "Cancelar", style: "cancel" },
-                { text: "Cerrar", style: "destructive", onPress: () => logout() }
-            ]
-        );
-    };
-
-    // 4. Esta es la función para NAVEGAR AL LOGIN (para invitados)
-    const handleLogin = () => {
-        router.replace('/auth/login');
-    };
+    const renderIcon = (name: any) => ({ color }: { color: string }) => (
+        <Ionicons name={name} size={28} color={color} />
+    );
 
     return (
-        <Tabs
-            screenOptions={{
-                tabBarActiveTintColor: colors.primary, // Usar el azul primario
-                headerStyle: { backgroundColor: '#FFFFFF' },
-                headerTintColor: colors.text,
-                headerTitleStyle: { fontWeight: 'bold' },
-                headerShown: true,
+        <Tabs screenOptions={{
+            tabBarActiveTintColor: colors.primary,
+            headerShown: true,
+        }}>
+            {/* 1. Pestaña Catálogo / Gestión */}
+            <Tabs.Screen name="index" options={{
+                title: isAsesor ? 'Gestión Planes' : 'Catálogo',
+                tabBarIcon: renderIcon(isAsesor ? 'list' : 'home'),
+            }} />
 
-                // --- 5. LÓGICA CONDICIONAL EN EL HEADER ---
-                headerRight: () => (
-                    isAuthenticated ? (
-                        // 5a. Si está autenticado, muestra "SALIR"
-                        <Button
-                            onPress={handleLogout}
-                            title="Salir"
-                            color={colors.danger} // Rojo
-                        />
-                    ) : (
-                        // 5b. Si es invitado, muestra "LOGIN"
-                        <Button
-                            onPress={handleLogin}
-                            title="Login"
-                            color={colors.primary} // Azul
-                        />
-                    )
-                ),
-                // --- FIN DEL CAMBIO ---
-            }}
-        >
-            {/* 1. DASHBOARD (Ruta index.tsx) */}
-            <Tabs.Screen
-                name="index"
-                options={{
-                    title: 'Catálogo', // Título para la pestaña de inicio
-                    tabBarIcon: ({ color, size }) => (
-                        <FontAwesome name="dashboard" size={size} color={color} />
-                    ),
-                }}
-            />
+            {/* 2. Pestaña Condicional (Solicitudes vs Mis Planes) */}
+            {isAsesor ? (
+                // Tab para Asesor
+                <Tabs.Screen name="solicitudes" options={{
+                    title: 'Solicitudes',
+                    tabBarIcon: renderIcon('documents'),
+                }} />
+            ) : (
+                // Tab para Usuario (Solo si está logueado)
+                isAuthenticated ? (
+                    <Tabs.Screen name="misplanes" options={{
+                        title: 'Mis Planes',
+                        tabBarIcon: renderIcon('briefcase'),
+                    }} />
+                ) : (
+                    // Si es invitado, ocultamos esta pestaña
+                    <Tabs.Screen name="misplanes" options={{ href: null }} />
+                )
+            )}
 
-            {/* 2. CHAT (Ruta chat/index.tsx) */}
-            <Tabs.Screen
-                name="chat"
-                options={{
-                    title: 'Chat',
-                    tabBarIcon: ({ color, size }) => (
-                        <Ionicons name="chatbubbles" size={size} color={color} />
-                    ),
-                }}
-            />
+            {/* 3. Pestaña Perfil */}
+            <Tabs.Screen name="profile" options={{
+                title: 'Perfil',
+                tabBarIcon: renderIcon('person'),
+            }} />
 
-            {/* 3. PERFIL (Ruta profile.tsx) */}
-            <Tabs.Screen
-                name="profile"
-                options={{
-                    title: 'Perfil',
-                    tabBarIcon: ({ color, size }) => (
-                        <FontAwesome name="user" size={size} color={color} />
-                    ),
-                }}
-            />
+            {/* --- RUTAS OCULTAS DEL MENÚ --- */}
+            {/* Estas pantallas existen pero no tienen botón en la barra inferior */}
 
-            {/* RUTAS OCULTAS */}
-            <Tabs.Screen name="chat/[receiverId]" options={{ href: null, headerShown: true }} />
-            <Tabs.Screen
-                name="change-password"
-                options={{
-                    href: null, // No aparece en la barra de abajo
-                    headerShown: true,
-                    title: 'Seguridad'
-                }}
-            />
-            <Tabs.Screen
-                name="create-plan"
-                options={{
-                    href: null,
-                    headerShown: true,
-                    title: 'Crear Plan'
-                }}
-            />
+            <Tabs.Screen name="create-plan" options={{ href: null, title: 'Plan' }} />
+            <Tabs.Screen name="change-password" options={{ href: null, title: 'Seguridad' }} />
+            <Tabs.Screen name="chat/index" options={{ href: null }} />
+            <Tabs.Screen name="chat/[receiverId]" options={{ href: null }} />
+
+            {/* Si no es Asesor, ocultamos la ruta de solicitudes para que no sea accesible */}
+            {!isAsesor && <Tabs.Screen name="solicitudes" options={{ href: null }} />}
 
         </Tabs>
     );
