@@ -1,25 +1,29 @@
 import { AuthRepository } from '../domain/repositories/AuthRepository';
-import { IStorageRepository } from '../domain/repositories/IStorageRepository';
 import { IMessageRepository } from '../domain/repositories/IMessageRepository';
+import { IStorageRepository } from '../domain/repositories/IStorageRepository';
 
 // --- CASOS DE USO DE AUTH ---
-import { RegisterUser } from '../domain/usecases/auth/RegisterUser';
+import { ForgotPassword } from '../domain/usecases/auth/ForgotPassword';
+import { GetCurrentUser } from '../domain/usecases/auth/GetCurrentUser';
 import { LoginUser } from '../domain/usecases/auth/LoginUser';
 import { LogoutUser } from '../domain/usecases/auth/LogoutUser';
-import { ForgotPassword } from '../domain/usecases/auth/ForgotPassword';
-import { UpdateProfile } from '../domain/usecases/auth/UpdateProfile';
+import { RegisterUser } from '../domain/usecases/auth/RegisterUser';
 import { UpdatePassword } from '../domain/usecases/auth/UpdatePassword';
-import { GetCurrentUser } from '../domain/usecases/auth/GetCurrentUser';
+import { UpdateProfile } from '../domain/usecases/auth/UpdateProfile';
 
 // --- OTROS CASOS DE USO (Resumidos para brevedad, añade los que falten) ---
-import { SendMensaje } from '../domain/usecases/chat/SendMensaje';
 import { GetMessages } from '../domain/usecases/chat/GetMessages';
+import { SendMensaje } from '../domain/usecases/chat/SendMensaje';
 
 // --- IMPLEMENTACIONES DE DATA ---
 import { AuthRepositoryImpl } from '../data/repositories/AuthRepositoryImpl';
-import { SupabaseStorageRepository } from '../data/repositories/SupabaseStorageRepository';
 import { SupabaseMessageRepository } from '../data/repositories/SupabaseMessageRepository';
+import { SupabaseStorageRepository } from '../data/repositories/SupabaseStorageRepository';
 // Añade los otros repositorios si los usas (Routine, Training, Progress)
+
+// Plan Movil
+import { SupabasePlanRepository } from '../data/repositories/SupabasePlanRepository';
+import { IPlanRepository } from '../domain/repositories/IPlanRepository';
 
 class DIContainer {
     private static instance: DIContainer;
@@ -41,6 +45,9 @@ class DIContainer {
 
     private _sendMensaje?: SendMensaje;
     private _getMessages?: GetMessages;
+
+    // Plan Movil
+    private _planRepository?: IPlanRepository;
 
     private constructor() { }
 
@@ -143,6 +150,14 @@ class DIContainer {
             this._getMessages = new GetMessages(this.messageRepository);
         }
         return this._getMessages!;
+    }
+
+    // Plan Movil
+    get planRepository(): IPlanRepository {
+        if (!this._planRepository) {
+            this._planRepository = new SupabasePlanRepository();
+        }
+        return this._planRepository!;
     }
 }
 

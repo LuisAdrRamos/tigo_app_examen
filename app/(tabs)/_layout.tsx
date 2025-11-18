@@ -100,6 +100,15 @@ export default function TabsLayout() {
                     title: 'Seguridad'
                 }}
             />
+            <Tabs.Screen
+                name="create-plan"
+                options={{
+                    href: null,
+                    headerShown: true,
+                    title: 'Crear Plan'
+                }}
+            />
+
         </Tabs>
     );
 }
