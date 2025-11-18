@@ -1,4 +1,3 @@
-// app/_layout.tsx
 import { Slot, useRouter, useSegments } from 'expo-router';
 import React, { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
@@ -14,7 +13,7 @@ const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }) => {
     );
 };
 
-// Componente que usa el hook useAuth y maneja la lógica de redirección
+// Componente que maneja la lógica de redirección
 function InitialLayout() {
     const { isAuthenticated, loading } = useAuth();
     const router = useRouter();
@@ -23,18 +22,25 @@ function InitialLayout() {
     useEffect(() => {
         if (loading) return;
 
-        const inAuthGroup = segments[0] === 'auth';
-        const inTabsGroup = segments[0] === '(tabs)'; // <-- Revisamos si está en TABS
+        const segment = segments[0];
+        const inAuthGroup = segment === 'auth';
+        const inTabsGroup = segment === '(tabs)';
+        const atWelcomeScreen = segment === undefined;
 
-        if (isAuthenticated && inAuthGroup) {
-            // REGLA 1: Logueado pero en auth -> Mandar a tabs
-            router.replace('/(tabs)');
+        // --- REGLA CRÍTICA DE PROTECCIÓN ---
+        if (!isAuthenticated) {
+            // Si NO está autenticado y está en (tabs) o en cualquier ruta protegida
+            // (excepto auth o bienvenida), lo mandamos al Login.
+            // Esto se activa inmediatamente cuando hacemos setUser(null) en el logout.
+            if (inTabsGroup && !atWelcomeScreen && !inAuthGroup) {
+                router.replace('/auth/login');
+            }
         }
-        else if (!isAuthenticated && !inAuthGroup && !inTabsGroup) {
-            // REGLA 2 (MODIFICADA):
-            // NO logueado, NO en auth, y NO en tabs -> Mandar a LOGIN
-            // (Esto permite que el invitado 'handleGuest' entre a 'tabs' y se quede allí)
-            router.replace('/auth/login');
+        // --- REGLA DE REDIRECCIÓN AL ENTRAR ---
+        else if (isAuthenticated && (inAuthGroup || atWelcomeScreen)) {
+            // Si ya está autenticado y trata de ir al login o bienvenida, 
+            // lo mandamos adentro.
+            router.replace('/(tabs)');
         }
 
     }, [isAuthenticated, loading, segments, router]);

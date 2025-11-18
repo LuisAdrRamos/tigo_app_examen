@@ -92,6 +92,14 @@ export default function TabsLayout() {
 
             {/* RUTAS OCULTAS */}
             <Tabs.Screen name="chat/[receiverId]" options={{ href: null, headerShown: true }} />
+            <Tabs.Screen
+                name="change-password"
+                options={{
+                    href: null, // No aparece en la barra de abajo
+                    headerShown: true,
+                    title: 'Seguridad'
+                }}
+            />
         </Tabs>
     );
 }

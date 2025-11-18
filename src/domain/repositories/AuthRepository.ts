@@ -28,6 +28,9 @@ export interface AuthRepository {
     /** Actualiza la información básica del perfil del usuario (ej: nombre). */
     updateProfile(id: string, name: string, telefono: string): Promise<User>;
 
+    /** Actualiza la contraseña del usuario actualmente autenticado. */
+    updatePassword(password: string): Promise<void>;
+
     /**
      * Escucha cambios en el estado de autenticación de Supabase.
      * @returns Una función para desuscribirse.
