@@ -16,8 +16,11 @@ import { UpdateProfile } from '../domain/usecases/auth/UpdateProfile';
 import { GetMessages } from '../domain/usecases/chat/GetMessages';
 import { SendMensaje } from '../domain/usecases/chat/SendMensaje';
 
-// Planes Use Cases (IMPORTAR UpdatePlan)
+// Planes Use Cases
 import { UpdatePlan } from '../domain/usecases/planes/UpdatePlan';
+
+// Storage Use Cases (NUEVO)
+import { UploadPlanImage } from '../domain/usecases/storage/UploadPlanImage';
 
 // Repositories Impl
 import { AuthRepositoryImpl } from '../data/repositories/AuthRepositoryImpl';
@@ -43,9 +46,10 @@ class DIContainer {
     private _getCurrentUser?: GetCurrentUser;
     private _sendMensaje?: SendMensaje;
     private _getMessages?: GetMessages;
-    
-    // Planes
-    private _updatePlan?: UpdatePlan; // <-- Cache para UpdatePlan
+
+    // Planes & Storage
+    private _updatePlan?: UpdatePlan;
+    private _uploadPlanImage?: UploadPlanImage; // <-- Cache
 
     private constructor() { }
 
@@ -112,12 +116,19 @@ class DIContainer {
         return this._getMessages!;
     }
 
-    // --- PLANES ---
-    get updatePlan(): UpdatePlan { // <-- Getter del caso de uso
+    // --- PLANES & STORAGE ---
+    get updatePlan(): UpdatePlan {
         if (!this._updatePlan) {
             this._updatePlan = new UpdatePlan(this.planRepository);
         }
         return this._updatePlan!;
+    }
+
+    get uploadPlanImage(): UploadPlanImage { // <-- Getter
+        if (!this._uploadPlanImage) {
+            this._uploadPlanImage = new UploadPlanImage(this.storageRepository);
+        }
+        return this._uploadPlanImage!;
     }
 }
 

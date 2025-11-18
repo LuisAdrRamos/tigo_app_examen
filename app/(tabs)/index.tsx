@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
-import { View, Text, FlatList, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
-import { useRouter, useFocusEffect } from 'expo-router'; // <-- IMPORTANTE: Importar useFocusEffect
+import { View, Text, FlatList, ActivityIndicator, TouchableOpacity, Alert, Image } from 'react-native'; // <-- Importar Image
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useAuth } from '../../src/presentation/hooks/useAuth';
 import { usePlanes } from '../../src/presentation/hooks/usePlanes';
 import { colors, authStyles } from '../../src/presentation/styles/authStyles';
@@ -10,19 +10,16 @@ import { PlanMovil } from '@/src/domain/entities/PlanMovil';
 
 export default function DashboardScreen() {
     const { user, role, loading: authLoading } = useAuth();
-    // Obtenemos refetch del hook
     const { planes, loading: planesLoading, refetch, eliminarPlan } = usePlanes();
     const router = useRouter();
 
-    // --- SOLUCIÓN: Recargar datos cada vez que la pantalla gana el foco ---
     useFocusEffect(
         useCallback(() => {
             refetch();
-        }, []) // El array vacío asegura que el callback sea estable
+        }, [])
     );
 
     if (authLoading || (planesLoading && planes.length === 0)) {
-        // Solo mostramos carga si no tenemos planes para evitar parpadeos molestos
         return (
             <View style={planesStyles.centered}>
                 <ActivityIndicator size="large" color={colors.primary} />
@@ -41,14 +38,13 @@ export default function DashboardScreen() {
                     style: "destructive",
                     onPress: async () => {
                         await eliminarPlan(id);
-                        refetch(); // Recargar tras eliminar
+                        refetch();
                     }
                 }
             ]
         );
     };
 
-    // --- FUNCIÓN PARA NAVEGAR A EDICIÓN ---
     const handleEditar = (plan: PlanMovil) => {
         router.push({
             pathname: '/(tabs)/create-plan',
@@ -59,7 +55,8 @@ export default function DashboardScreen() {
                 datos_gb: plan.datos_gb,
                 minutos: plan.minutos,
                 descripcion: plan.descripcion || '',
-                promocion: plan.promocion || ''
+                promocion: plan.promocion || '',
+                imagen_url: plan.imagen_url || '' // <-- Pasar URL si existe
             }
         });
     };
@@ -86,6 +83,22 @@ export default function DashboardScreen() {
                     contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}
                     renderItem={({ item }) => (
                         <View style={planesStyles.adminCard}>
+                            {/* IMAGEN PEQUEÑA EN MODO LISTA */}
+                            {item.imagen_url ? (
+                                <Image
+                                    source={{ uri: item.imagen_url }}
+                                    style={{ width: 60, height: 60, borderRadius: 8, marginRight: 15 }}
+                                    resizeMode="cover"
+                                />
+                            ) : (
+                                <View style={{
+                                    width: 60, height: 60, borderRadius: 8, marginRight: 15,
+                                    backgroundColor: colors.primaryLight, justifyContent: 'center', alignItems: 'center'
+                                }}>
+                                    <Ionicons name="image-outline" size={24} color={colors.primary} />
+                                </View>
+                            )}
+
                             <View style={{ flex: 1 }}>
                                 <Text style={planesStyles.planName}>{item.nombre}</Text>
                                 <Text style={planesStyles.planPrice}>${item.precio}</Text>
@@ -94,12 +107,10 @@ export default function DashboardScreen() {
                             </View>
 
                             <View style={{ flexDirection: 'row', gap: 15 }}>
-                                {/* BOTÓN EDITAR */}
                                 <TouchableOpacity onPress={() => handleEditar(item)}>
                                     <Ionicons name="pencil" size={24} color={colors.secondary} />
                                 </TouchableOpacity>
 
-                                {/* BOTÓN ELIMINAR */}
                                 <TouchableOpacity onPress={() => handleEliminar(item.id)}>
                                     <Ionicons name="trash-outline" size={24} color={colors.danger} />
                                 </TouchableOpacity>
@@ -124,13 +135,22 @@ export default function DashboardScreen() {
                 data={planes}
                 keyExtractor={(item) => item.id.toString()}
                 contentContainerStyle={{ padding: 20 }}
-                refreshing={planesLoading} // Pull to refresh nativo
+                refreshing={planesLoading}
                 onRefresh={refetch}
                 renderItem={({ item }) => (
                     <View style={planesStyles.catalogCard}>
-                        <View style={planesStyles.imagePlaceholder}>
-                            <Ionicons name="cellular-outline" size={40} color="white" />
-                        </View>
+                        {/* IMAGEN GRANDE EN MODO CATÁLOGO */}
+                        {item.imagen_url ? (
+                            <Image
+                                source={{ uri: item.imagen_url }}
+                                style={{ width: '100%', height: 150 }}
+                                resizeMode="cover"
+                            />
+                        ) : (
+                            <View style={planesStyles.imagePlaceholder}>
+                                <Ionicons name="cellular-outline" size={40} color="white" />
+                            </View>
+                        )}
 
                         <View style={planesStyles.cardContent}>
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -138,7 +158,6 @@ export default function DashboardScreen() {
                                 <Text style={planesStyles.catalogPrice}>${item.precio}</Text>
                             </View>
 
-                            {/* PROMOCIÓN */}
                             {item.promocion && (
                                 <View style={{ backgroundColor: '#FFF9C4', padding: 5, borderRadius: 5, alignSelf: 'flex-start', marginVertical: 5 }}>
                                     <Text style={{ color: '#FBC02D', fontWeight: 'bold', fontSize: 12 }}>{item.promocion}</Text>

@@ -36,7 +36,6 @@ export const usePlanes = () => {
     const actualizarPlan = async (id: number, data: Partial<CreatePlanMovilData>) => {
         try {
             const updatedPlan = await container.updatePlan.execute(id, data);
-            // Actualizamos el estado local reemplazando el plan viejo por el nuevo
             setPlanes(prevPlanes => prevPlanes.map(p => p.id === id ? updatedPlan : p));
             return { success: true };
         } catch (error: any) {
@@ -54,12 +53,24 @@ export const usePlanes = () => {
         }
     }
 
+    // --- NUEVA FUNCIÓN: Subir Imagen ---
+    const subirImagen = async (uri: string): Promise<string | null> => {
+        try {
+            const publicUrl = await container.uploadPlanImage.execute(uri);
+            return publicUrl;
+        } catch (error: any) {
+            Alert.alert("Error de Carga", "No se pudo subir la imagen: " + error.message);
+            return null;
+        }
+    }
+
     return {
         planes,
         loading,
         refetch: fetchPlanes,
         crearPlan,
-        actualizarPlan, // <-- Exponemos la función
-        eliminarPlan
+        actualizarPlan,
+        eliminarPlan,
+        subirImagen // <-- Exportamos la función
     };
 };
