@@ -1,22 +1,28 @@
-import React, { useEffect } from 'react';
+import React, { useCallback } from 'react';
 import { View, Text, FlatList, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router'; // <-- IMPORTANTE: Importar useFocusEffect
 import { useAuth } from '../../src/presentation/hooks/useAuth';
 import { usePlanes } from '../../src/presentation/hooks/usePlanes';
 import { colors, authStyles } from '../../src/presentation/styles/authStyles';
-import { planesStyles } from '../../src/presentation/styles/planesStyles'; // <-- IMPORTAR
+import { planesStyles } from '../../src/presentation/styles/planesStyles';
 import { Ionicons } from '@expo/vector-icons';
+import { PlanMovil } from '@/src/domain/entities/PlanMovil';
 
 export default function DashboardScreen() {
     const { user, role, loading: authLoading } = useAuth();
+    // Obtenemos refetch del hook
     const { planes, loading: planesLoading, refetch, eliminarPlan } = usePlanes();
     const router = useRouter();
 
-    useEffect(() => {
-        refetch();
-    }, []);
+    // --- SOLUCIÓN: Recargar datos cada vez que la pantalla gana el foco ---
+    useFocusEffect(
+        useCallback(() => {
+            refetch();
+        }, []) // El array vacío asegura que el callback sea estable
+    );
 
-    if (authLoading || planesLoading) {
+    if (authLoading || (planesLoading && planes.length === 0)) {
+        // Solo mostramos carga si no tenemos planes para evitar parpadeos molestos
         return (
             <View style={planesStyles.centered}>
                 <ActivityIndicator size="large" color={colors.primary} />
@@ -35,13 +41,30 @@ export default function DashboardScreen() {
                     style: "destructive",
                     onPress: async () => {
                         await eliminarPlan(id);
-                        refetch();
+                        refetch(); // Recargar tras eliminar
                     }
                 }
             ]
         );
     };
 
+    // --- FUNCIÓN PARA NAVEGAR A EDICIÓN ---
+    const handleEditar = (plan: PlanMovil) => {
+        router.push({
+            pathname: '/(tabs)/create-plan',
+            params: {
+                id: plan.id,
+                nombre: plan.nombre,
+                precio: plan.precio.toString(),
+                datos_gb: plan.datos_gb,
+                minutos: plan.minutos,
+                descripcion: plan.descripcion || '',
+                promocion: plan.promocion || ''
+            }
+        });
+    };
+
+    // --- VISTA ASESOR (ADMIN) ---
     if (role === 'asesor_comercial') {
         return (
             <View style={planesStyles.container}>
@@ -67,10 +90,20 @@ export default function DashboardScreen() {
                                 <Text style={planesStyles.planName}>{item.nombre}</Text>
                                 <Text style={planesStyles.planPrice}>${item.precio}</Text>
                                 <Text style={planesStyles.planDetail}>{item.datos_gb} - {item.minutos}</Text>
+                                {item.promocion ? <Text style={{ color: 'orange', fontSize: 10, fontWeight: 'bold' }}>{item.promocion}</Text> : null}
                             </View>
-                            <TouchableOpacity onPress={() => handleEliminar(item.id)}>
-                                <Ionicons name="trash-outline" size={24} color={colors.danger} />
-                            </TouchableOpacity>
+
+                            <View style={{ flexDirection: 'row', gap: 15 }}>
+                                {/* BOTÓN EDITAR */}
+                                <TouchableOpacity onPress={() => handleEditar(item)}>
+                                    <Ionicons name="pencil" size={24} color={colors.secondary} />
+                                </TouchableOpacity>
+
+                                {/* BOTÓN ELIMINAR */}
+                                <TouchableOpacity onPress={() => handleEliminar(item.id)}>
+                                    <Ionicons name="trash-outline" size={24} color={colors.danger} />
+                                </TouchableOpacity>
+                            </View>
                         </View>
                     )}
                     ListEmptyComponent={<Text style={planesStyles.emptyText}>No hay planes creados.</Text>}
@@ -79,7 +112,7 @@ export default function DashboardScreen() {
         );
     }
 
-    // --- CATALOGO ---
+    // --- VISTA USUARIO / INVITADO (CATÁLOGO) ---
     return (
         <View style={planesStyles.container}>
             <View style={planesStyles.header}>
@@ -91,6 +124,8 @@ export default function DashboardScreen() {
                 data={planes}
                 keyExtractor={(item) => item.id.toString()}
                 contentContainerStyle={{ padding: 20 }}
+                refreshing={planesLoading} // Pull to refresh nativo
+                onRefresh={refetch}
                 renderItem={({ item }) => (
                     <View style={planesStyles.catalogCard}>
                         <View style={planesStyles.imagePlaceholder}>
@@ -102,6 +137,13 @@ export default function DashboardScreen() {
                                 <Text style={planesStyles.catalogName}>{item.nombre}</Text>
                                 <Text style={planesStyles.catalogPrice}>${item.precio}</Text>
                             </View>
+
+                            {/* PROMOCIÓN */}
+                            {item.promocion && (
+                                <View style={{ backgroundColor: '#FFF9C4', padding: 5, borderRadius: 5, alignSelf: 'flex-start', marginVertical: 5 }}>
+                                    <Text style={{ color: '#FBC02D', fontWeight: 'bold', fontSize: 12 }}>{item.promocion}</Text>
+                                </View>
+                            )}
 
                             <Text style={planesStyles.catalogDescription} numberOfLines={2}>
                                 {item.descripcion || "Sin descripción"}
@@ -125,7 +167,7 @@ export default function DashboardScreen() {
                                         Alert.alert("Atención", "Debes iniciar sesión para contratar.");
                                         router.push('/auth/login');
                                     } else {
-                                        Alert.alert("Próximamente", "Sistema de contratación en construcción (Punto 3).");
+                                        Alert.alert("Próximamente", "Sistema de contratación en construcción.");
                                     }
                                 }}
                             >

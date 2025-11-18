@@ -5,6 +5,7 @@ export interface PlanMovil {
     datos_gb: string;
     minutos: string;
     descripcion?: string;
+    promocion?: string; // <-- Nuevo campo según tu SQL
     imagen_url?: string;
     activo: boolean;
 }
@@ -15,5 +16,6 @@ export interface CreatePlanMovilData {
     datos_gb: string;
     minutos: string;
     descripcion?: string;
+    promocion?: string; // <-- Nuevo campo
     imagen_url?: string;
 }

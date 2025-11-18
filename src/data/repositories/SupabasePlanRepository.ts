@@ -27,12 +27,25 @@ export class SupabasePlanRepository implements IPlanRepository {
     }
 
     async delete(id: number): Promise<void> {
-        // Soft delete (desactivar en lugar de borrar para mantener historial)
+        // Soft delete (desactivar en lugar de borrar)
         const { error } = await supabase
             .from('planes_moviles')
-            .delete()
+            .update({ activo: false }) // <-- Importante: Soft delete
             .eq('id', id);
 
         if (error) throw new Error(error.message);
+    }
+
+    // --- IMPLEMENTACIÓN DE UPDATE ---
+    async update(id: number, data: Partial<CreatePlanMovilData>): Promise<PlanMovil> {
+        const { data: updatedPlan, error } = await supabase
+            .from('planes_moviles')
+            .update(data)
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) throw new Error(error.message);
+        return updatedPlan as PlanMovil;
     }
 }

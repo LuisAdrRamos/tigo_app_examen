@@ -4,5 +4,5 @@ export interface IPlanRepository {
     getAll(): Promise<PlanMovil[]>;
     create(data: CreatePlanMovilData): Promise<PlanMovil>;
     delete(id: number): Promise<void>;
-    // update lo dejamos para si sobra tiempo
+    update(id: number, data: Partial<CreatePlanMovilData>): Promise<PlanMovil>; // <-- Nuevo método
 }

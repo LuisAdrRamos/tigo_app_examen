@@ -33,6 +33,17 @@ export const usePlanes = () => {
         }
     };
 
+    const actualizarPlan = async (id: number, data: Partial<CreatePlanMovilData>) => {
+        try {
+            const updatedPlan = await container.updatePlan.execute(id, data);
+            // Actualizamos el estado local reemplazando el plan viejo por el nuevo
+            setPlanes(prevPlanes => prevPlanes.map(p => p.id === id ? updatedPlan : p));
+            return { success: true };
+        } catch (error: any) {
+            return { success: false, error: error.message };
+        }
+    };
+
     const eliminarPlan = async (id: number) => {
         try {
             await container.planRepository.delete(id);
@@ -48,6 +59,7 @@ export const usePlanes = () => {
         loading,
         refetch: fetchPlanes,
         crearPlan,
+        actualizarPlan, // <-- Exponemos la función
         eliminarPlan
     };
 };
